@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Run npm inside the frontend-dev container. Example: scripts/npm install
+set -e
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+exec docker compose -f "$ROOT/docker-compose.dev.yml" run --rm frontend-dev npm "$@"
