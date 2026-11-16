@@ -1,0 +1,13 @@
+# Build output (the image builds its own)
+target/
+
+# IDE and OS files
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# Secrets and logs
+.env
+*.pem
+*.log
