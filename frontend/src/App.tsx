@@ -1,5 +1,9 @@
 function App() {
-  return <h1>EventFund</h1>
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-slate-100">
+      <h1 className="text-4xl font-bold text-emerald-600">EventFund</h1>
+    </main>
+  )
 }
 
 export default App

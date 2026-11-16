@@ -35,4 +35,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        include: health
+  health:
+    mail:
+      enabled: false # an SMTP outage should not mark the whole app as DOWN

@@ -1,0 +1,14 @@
+# Dependencies and build output (the image installs and builds its own)
+node_modules/
+dist/
+
+# IDE and OS files
+.idea/
+.vscode/
+.DS_Store
+
+# Secrets and logs
+.env
+.env.*
+*.pem
+*.log
