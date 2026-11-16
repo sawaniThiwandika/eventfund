@@ -1,0 +1,70 @@
+# EventFund: run everything with `docker compose up --build`.
+# Settings come from .env (copy .env.example to .env first).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-eventfund}
+      POSTGRES_USER: ${DB_USER:-eventfund}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432" # only reachable from this machine, never from outside
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    restart: unless-stopped
+    ports:
+      - "8025:8025" # web UI to read caught emails; SMTP (1025) stays inside the Docker network
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-eventfund}
+      DB_USER: ${DB_USER:-eventfund}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      UPLOAD_DIR: ${UPLOAD_DIR:-/app/uploads}
+    volumes:
+      - uploads:/app/uploads
+    ports:
+      - "8080:8080"
+    mem_limit: 768m # the JVM uses 50% of this for its heap (-XX:MaxRAMPercentage=50)
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  uploads:
