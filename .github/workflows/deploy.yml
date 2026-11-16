@@ -1,0 +1,122 @@
+name: Deploy
+
+# Runs after the CI workflow finishes for a push to main, and only if CI succeeded.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Never run two deploys at the same time; a newer one waits for the older one.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      EC2_HOST: ${{ secrets.EC2_HOST }}
+      EC2_USER: ${{ secrets.EC2_USER }}
+
+    steps:
+      # Deploy exactly the commit that CI tested.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Set up SSH key
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          cat > ~/.ssh/config <<EOF
+          Host server
+            HostName $EC2_HOST
+            User $EC2_USER
+            IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
+            StrictHostKeyChecking yes
+            ServerAliveInterval 30
+          EOF
+
+      # Copy the project. The server never needs GitHub credentials.
+      # The server's .env is excluded, so rsync --delete never removes it.
+      - name: Copy project files to the server
+        run: |
+          ssh server "mkdir -p ~/eventfund"
+          rsync -az --delete \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude '.env' \
+            --exclude 'node_modules/' \
+            --exclude 'target/' \
+            --exclude 'dist/' \
+            --exclude 'docs/' \
+            --exclude 'docs-private/' \
+            --exclude '.idea/' \
+            --exclude 'CLAUDE.md' \
+            ./ "server:~/eventfund/"
+
+      # Build .env from secrets and send it over SSH. Values are never echoed, and GitHub
+      # masks secrets in logs. Values are single-quoted so Docker Compose does not
+      # interpret characters like $ inside them.
+      - name: Write .env on the server
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          GRAFANA_PASSWORD: ${{ secrets.GRAFANA_PASSWORD }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          FRONTEND_URL: ${{ vars.FRONTEND_URL }}
+        run: |
+          for name in DB_PASSWORD JWT_SECRET GRAFANA_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Secret $name is not set"
+              exit 1
+            fi
+          done
+          for name in DB_PASSWORD JWT_SECRET GRAFANA_PASSWORD SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASSWORD FRONTEND_URL; do
+            case "${!name}" in
+              *"'"*) echo "::error::$name must not contain a single quote (')"; exit 1 ;;
+            esac
+          done
+
+          umask 077
+          {
+            echo "DB_NAME='eventfund'"
+            echo "DB_USER='eventfund'"
+            printf "DB_PASSWORD='%s'\n" "$DB_PASSWORD"
+            printf "JWT_SECRET='%s'\n" "$JWT_SECRET"
+            printf "SMTP_HOST='%s'\n" "$SMTP_HOST"
+            printf "SMTP_PORT='%s'\n" "${SMTP_PORT:-587}"
+            printf "SMTP_USER='%s'\n" "$SMTP_USER"
+            printf "SMTP_PASSWORD='%s'\n" "$SMTP_PASSWORD"
+            printf "FRONTEND_URL='%s'\n" "${FRONTEND_URL:-http://$EC2_HOST}"
+            echo "UPLOAD_DIR='/app/uploads'"
+            printf "GRAFANA_PASSWORD='%s'\n" "$GRAFANA_PASSWORD"
+          } > deploy.env
+
+          ssh server 'umask 077 && cat > ~/eventfund/.env' < deploy.env
+          rm -f deploy.env
+          echo ".env written on the server"
+
+      - name: Run deploy script
+        run: ssh server 'bash ~/eventfund/scripts/deploy.sh'
+
+      - name: Remove SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
