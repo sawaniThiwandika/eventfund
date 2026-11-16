@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Run Maven inside the backend-dev container. Example: scripts/mvn test
+set -e
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+exec docker compose -f "$ROOT/docker-compose.dev.yml" run --rm backend-dev mvn "$@"

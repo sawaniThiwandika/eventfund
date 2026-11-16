@@ -1,0 +1,38 @@
+# All settings come from environment variables (see .env.example).
+# Secrets have no default on purpose: the app must not start without them.
+
+spring:
+  application:
+    name: eventfund
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:eventfund}
+    username: ${DB_USER:eventfund}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate # Flyway owns the schema
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USER:}
+    password: ${SMTP_PASSWORD:}
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+  upload-dir: ${UPLOAD_DIR:/app/uploads}
+  frontend-url: ${FRONTEND_URL:http://localhost}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
