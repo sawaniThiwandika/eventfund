@@ -1,0 +1,89 @@
+# EventFund production stack for the EC2 server (Ubuntu, 2 GB RAM).
+# Run on the server with:  docker compose -f docker-compose.prod.yml up -d --build
+# Settings come from the server's .env file (never committed).
+#
+# Differences from docker-compose.yml:
+#   - no Mailpit: the backend uses a real SMTP server from .env
+#   - PostgreSQL has no published ports (only reachable inside the Docker network)
+#   - the backend port is only published on 127.0.0.1 (for health-check scripts); users go through nginx
+#   - memory limits sized for a 2 GB server
+
+# Keep container logs small so they cannot fill the disk.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-eventfund}
+      POSTGRES_USER: ${DB_USER:-eventfund}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    logging: *logging
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-eventfund}
+      DB_USER: ${DB_USER:-eventfund}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      # Real SMTP server (no Mailpit in production). Set these in the server's .env.
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      FRONTEND_URL: ${FRONTEND_URL:?Set FRONTEND_URL in .env, e.g. http://YOUR_ELASTIC_IP}
+      UPLOAD_DIR: ${UPLOAD_DIR:-/app/uploads}
+      # Memory-safe JVM for a small server (the Dockerfile already sets -XX:MaxRAMPercentage=50):
+      #   SerialGC uses the least memory; capped metaspace, code cache and thread stacks.
+      JAVA_TOOL_OPTIONS: >-
+        -XX:+UseSerialGC
+        -XX:MaxMetaspaceSize=192m
+        -XX:ReservedCodeCacheSize=64m
+        -Xss512k
+    volumes:
+      - uploads:/app/uploads
+    ports:
+      - "127.0.0.1:8080:8080"
+    mem_limit: 640m # heap = 50% = 320 MB; the rest is for metaspace, threads and code cache
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+    logging: *logging
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    mem_limit: 64m
+    depends_on:
+      backend:
+        condition: service_healthy
+    logging: *logging
+
+volumes:
+  pgdata:
+  uploads:
