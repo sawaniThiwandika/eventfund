@@ -5,27 +5,6 @@ invites other people as Editors or Viewers, records income and expenses with opt
 sees the current balance on a dashboard and downloads a PDF report. It runs as Docker containers
 (Spring Boot backend, React frontend, PostgreSQL) and is deployed to AWS EC2.
 
-## Features
-
-✅ = done, ⏳ = planned
-
-| Status | Feature |
-|---|---|
-| ⏳ | Register, log in and log out (JWT) |
-| ⏳ | Create and manage several events; the creator becomes the event's Owner |
-| ⏳ | Invite members by email as Editor or Viewer; accept or reject invitations |
-| ⏳ | Per-event roles: Owner manages the event and members, Editor adds records, Viewer reads |
-| ⏳ | Record income and expenses in LKR, with optional slip or bill uploads (JPG, PNG, PDF) |
-| ⏳ | Dashboard with total income, total expenses, balance, a chart and recent records |
-| ⏳ | Financial report with a date filter, downloadable as PDF |
-| ✅ | Database schema with Flyway migrations |
-| ✅ | Health endpoint (`/actuator/health`) |
-| ✅ | Everything runs with Docker Compose |
-| ✅ | CI on GitHub Actions (backend tests, frontend build, Docker build) |
-| ✅ | Automatic deploy to AWS EC2 after CI passes on `main` |
-| ⏳ | Monitoring with Prometheus and Grafana, alerts |
-| ⏳ | Bash scripts for health checks and database backup / restore |
-
 ## Tech stack
 
 | Area | Technology |
