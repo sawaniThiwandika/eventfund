@@ -1,30 +1,24 @@
 # EventFund
 
-EventFund is a web application for tracking the money of an event. A user creates an event,
+EventFund is a web application for managing the money of an event. A user creates an event,
 invites other people as Editors or Viewers, records income and expenses with optional slips,
-sees the current balance on a dashboard and downloads a PDF report. It runs as Docker containers
-(Spring Boot backend, React frontend, PostgreSQL) and is deployed to AWS EC2.
+sees the current balance on a dashboard and downloads a PDF report.
+
+It is built for university events, workshops, hackathons and seminars, where several people need
+a shared and clear view of the event's finances.
 
 ## Features
 
-✅ = done, ⏳ = planned
-
-| Status | Feature |
-|---|---|
-| ⏳ | Register, log in and log out (JWT) |
-| ⏳ | Create and manage several events; the creator becomes the event's Owner |
-| ⏳ | Invite members by email as Editor or Viewer; accept or reject invitations |
-| ⏳ | Per-event roles: Owner manages the event and members, Editor adds records, Viewer reads |
-| ⏳ | Record income and expenses in LKR, with optional slip or bill uploads (JPG, PNG, PDF) |
-| ⏳ | Dashboard with total income, total expenses, balance, a chart and recent records |
-| ⏳ | Financial report with a date filter, downloadable as PDF |
-| ✅ | Database schema with Flyway migrations |
-| ✅ | Health endpoint (`/actuator/health`) |
-| ✅ | Everything runs with Docker Compose |
-| ✅ | CI on GitHub Actions (backend tests, frontend build, Docker build) |
-| ✅ | Automatic deploy to AWS EC2 after CI passes on `main` |
-| ⏳ | Monitoring with Prometheus and Grafana, alerts |
-| ⏳ | Bash scripts for health checks and database backup / restore |
+- **Accounts** – register, log in and log out
+- **Events** – create and manage several events; the creator becomes the event's Owner
+- **Members and roles** – invite people by email as Editor or Viewer; roles apply per event
+  - *Owner* manages the event and its members
+  - *Editor* adds income and expenses
+  - *Viewer* has read-only access
+- **Income and expenses** – amounts in LKR, with optional slip or bill uploads (JPG, PNG, PDF)
+- **Dashboard** – total income, total expenses, balance, a chart and recent records
+- **Reports** – filter by date range and download as PDF
+- **Operations** – health checks, monitoring with Prometheus and Grafana, automated CI/CD
 
 ## Tech stack
 
@@ -33,85 +27,78 @@ sees the current balance on a dashboard and downloads a PDF report. It runs as D
 | Backend | Java 21, Spring Boot 3, Spring Security + JWT, Spring Data JPA |
 | Database | PostgreSQL 16, Flyway |
 | Frontend | React, TypeScript, Vite, Tailwind CSS |
-| Web server | nginx (serves the frontend and proxies `/api` to the backend) |
-| Email | Mailpit locally, a real SMTP server in production |
+| Web server | nginx |
 | Containers | Docker, Docker Compose |
 | CI/CD | GitHub Actions |
-| Hosting | AWS EC2 (Ubuntu) |
+| Hosting | AWS EC2 |
 
 ## Architecture
 
 ```
-Browser ──► frontend (nginx :80) ──/api──► backend (Spring Boot :8080) ──► postgres
+Browser ──► frontend (nginx :80) ──/api──► backend (Spring Boot :8080) ──► PostgreSQL
                                                      │
-                                                     ├──► uploads volume (slips and bills)
-                                                     └──► SMTP (Mailpit locally)
+                                                     ├──► file storage (slips and bills)
+                                                     └──► SMTP (invitation emails)
 ```
 
-## How to run
+nginx serves the React app and forwards `/api` requests to the backend.
 
-You only need **Docker** (Docker Desktop on Windows or macOS). Java, Maven and Node are not needed
-on your machine.
+## Getting started
 
-1. Create your settings file and set at least `DB_PASSWORD` and `JWT_SECRET`:
+The only requirement is **Docker** (with Docker Compose).
+
+1. Clone the repository and create a settings file:
    ```bash
+   git clone <repository-url>
+   cd eventfund
    cp .env.example .env
    ```
-2. Start everything:
+2. Edit `.env` and set at least `DB_PASSWORD` and `JWT_SECRET`.
+3. Start the application:
    ```bash
    docker compose up --build
    ```
-3. Open:
+4. Open:
 
    | URL | What |
    |---|---|
-   | http://localhost | EventFund app |
-   | http://localhost:8080/actuator/health | Backend health (`{"status":"UP"}`) |
-   | http://localhost:8025 | Mailpit, the inbox for test emails |
+   | http://localhost | EventFund |
+   | http://localhost:8080/actuator/health | Backend health check |
+   | http://localhost:8025 | Mailpit – catches emails sent in development |
 
-4. Stop with `Ctrl+C`, then `docker compose down`. Your data stays in Docker volumes.
-   `docker compose down -v` also deletes the database and uploads.
+Stop with `Ctrl+C` and `docker compose down`. Data is kept in Docker volumes;
+`docker compose down -v` removes it.
 
-The app needs ports **80, 8080, 8025** and **5432** to be free.
+## Development
 
-## Development commands
+Maven and npm run inside Docker containers, so Java and Node do not need to be installed.
 
-Maven and npm run inside Docker through small helper scripts.
-
-| Bash / Git Bash | PowerShell | What it does |
+| Bash | PowerShell | What it does |
 |---|---|---|
-| `scripts/mvn test` | `.\scripts\mvn test` | Run backend tests (uses a Postgres container) |
+| `scripts/mvn test` | `.\scripts\mvn test` | Run backend tests |
 | `scripts/mvn package` | `.\scripts\mvn package` | Build the backend |
 | `scripts/npm install` | `.\scripts\npm install` | Install frontend packages |
 | `scripts/npm run build` | `.\scripts\npm run build` | Build the frontend |
 
-Any Maven or npm arguments work the same way. To stop the dev database:
-`docker compose -f docker-compose.dev.yml down`.
-
-On Windows, allow PowerShell scripts once with
-`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
-
 ## Deployment
 
-Every push to `main` runs CI. If CI passes, the **Deploy** workflow:
-
-1. copies the project to `~/eventfund` on the EC2 server with rsync (the server needs no GitHub access),
-2. writes the server's `.env` from GitHub secrets,
-3. runs `scripts/deploy.sh`, which starts `docker-compose.prod.yml` and waits until the backend is healthy.
-
-Required GitHub secrets: `EC2_HOST`, `EC2_USER`, `EC2_SSH_KEY`, `DB_PASSWORD`, `JWT_SECRET`,
-`GRAFANA_PASSWORD`. Optional: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, and the
-variable `FRONTEND_URL`.
+Every push to `main` runs the CI pipeline (backend tests, frontend build, Docker build).
+When CI passes, GitHub Actions deploys the application to an AWS EC2 server with
+`docker-compose.prod.yml`.
 
 ## Project structure
 
 ```
-backend/                  Spring Boot API (Maven)
-frontend/                 React app (Vite) and nginx config
-scripts/                  mvn / npm helpers and deploy.sh
-infra/                    infrastructure config (monitoring, coming later)
-docker-compose.yml        local stack: postgres, mailpit, backend, frontend
+backend/                  Spring Boot API
+frontend/                 React app and nginx config
+scripts/                  helper and deployment scripts
+infra/                    infrastructure configuration
+docker-compose.yml        local development stack
 docker-compose.dev.yml    containers for running Maven and npm
-docker-compose.prod.yml   production stack for the EC2 server
-.github/workflows/        CI and deploy pipelines
+docker-compose.prod.yml   production stack
+.github/workflows/        CI and deployment pipelines
 ```
+
+## License
+
+See [LICENSE](LICENSE).
