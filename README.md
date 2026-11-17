@@ -102,4 +102,3 @@ docker-compose.prod.yml   production stack
 ## License
 
 See [LICENSE](LICENSE).
-
