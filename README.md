@@ -4,9 +4,14 @@ EventFund is a web application for managing the money of an event. A user create
 invites other people as Editors or Viewers, records income and expenses with optional slips,
 sees the current balance on a dashboard and downloads a PDF report.
 
-It is built for university events, workshops, hackathons and seminars, where several people need
+It is built for events like workshops, hackathons and seminars, where several people need
 a shared and clear view of the event's finances.
 
+**Links**
+
+- Source code: https://github.com/sawaniThiwandika/eventfund
+- Live demo: http://3.24.211.186
+  
 ## Features
 
 - **Accounts** – register, log in and log out
@@ -15,16 +20,15 @@ a shared and clear view of the event's finances.
   - *Owner* manages the event and its members
   - *Editor* adds income and expenses
   - *Viewer* has read-only access
-- **Income and expenses** – amounts in LKR, with optional slip or bill uploads (JPG, PNG, PDF)
+- **Income and expenses** – amounts, with optional slip or bill uploads (JPG, PNG, PDF)
 - **Dashboard** – total income, total expenses, balance, a chart and recent records
 - **Reports** – filter by date range and download as PDF
-- **Operations** – health checks, monitoring with Prometheus and Grafana, automated CI/CD
 
 ## Tech stack
 
 | Area | Technology |
 |---|---|
-| Backend | Java 21, Spring Boot 3, Spring Security + JWT, Spring Data JPA |
+| Backend | Java 21, Spring Boot 3, Spring Security, Spring Data JPA |
 | Database | PostgreSQL 16, Flyway |
 | Frontend | React, TypeScript, Vite, Tailwind CSS |
 | Web server | nginx |
@@ -36,12 +40,10 @@ a shared and clear view of the event's finances.
 
 ```
 Browser ──► frontend (nginx :80) ──/api──► backend (Spring Boot :8080) ──► PostgreSQL
-                                                     │
-                                                     ├──► file storage (slips and bills)
-                                                     └──► SMTP (invitation emails)
 ```
 
 nginx serves the React app and forwards `/api` requests to the backend.
+The database is only reachable inside the Docker network.
 
 ## Getting started
 
@@ -49,7 +51,7 @@ The only requirement is **Docker** (with Docker Compose).
 
 1. Clone the repository and create a settings file:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/sawaniThiwandika/eventfund.git
    cd eventfund
    cp .env.example .env
    ```
