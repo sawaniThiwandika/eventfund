@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { Navbar } from './components/Navbar'
+import { EventFormPage } from './pages/EventFormPage'
+import { EventPage } from './pages/EventPage'
 import { EventsPage } from './pages/EventsPage'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
@@ -23,14 +25,10 @@ function App() {
             <Route path="/" element={<Navigate to="/events" replace />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
-            <Route
-              path="/events"
-              element={
-                <ProtectedRoute>
-                  <EventsPage />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/events" element={<ProtectedRoute><EventsPage /></ProtectedRoute>} />
+            <Route path="/events/new" element={<ProtectedRoute><EventFormPage /></ProtectedRoute>} />
+            <Route path="/events/:id/edit" element={<ProtectedRoute><EventFormPage /></ProtectedRoute>} />
+            <Route path="/events/:id/*" element={<ProtectedRoute><EventPage /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
