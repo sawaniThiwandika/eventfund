@@ -1,1 +1,79 @@
 @import "tailwindcss";
+
+/* Shared look for the whole app: a modern blue theme. */
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+  }
+}
+
+@layer components {
+  /* Fine grid pattern used as a background texture. */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, rgb(37 99 235 / 0.07) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(37 99 235 / 0.07) 1px, transparent 1px);
+    background-size: 36px 36px;
+  }
+
+  .bg-grid-light {
+    background-image:
+      linear-gradient(to right, rgb(255 255 255 / 0.09) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(255 255 255 / 0.09) 1px, transparent 1px);
+    background-size: 36px 36px;
+  }
+
+  .card {
+    @apply rounded-2xl bg-white p-6 sm:p-8 shadow-lg shadow-blue-900/5 ring-1 ring-slate-200/70;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-linear-to-r from-blue-600 to-sky-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/25 transition hover:from-blue-700 hover:to-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-300 transition hover:bg-blue-50 hover:text-blue-700 hover:ring-blue-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-blue-50 hover:text-blue-700;
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-slate-700;
+  }
+
+  .input {
+    @apply block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-xs transition focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/15;
+  }
+
+  /* Rounded "pill" input with an icon segment on the left (login and register). */
+  .input-pill {
+    @apply block w-full rounded-full border border-slate-200 bg-white py-3.5 pr-5 pl-16 text-sm text-slate-900 shadow-sm shadow-blue-900/5 transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/15 focus:outline-none sm:text-base;
+  }
+
+  .input-pill-icon {
+    @apply pointer-events-none absolute inset-y-2 left-0 flex w-13 items-center justify-center border-r border-slate-200 text-slate-600 transition peer-focus:text-blue-600;
+  }
+
+  .btn-pill {
+    @apply inline-flex items-center justify-center gap-2.5 rounded-full bg-linear-to-r from-blue-700 via-blue-600 to-sky-500 px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-blue-600/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/40 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .field-error {
+    @apply mt-1.5 text-sm text-red-600;
+  }
+
+  .alert-error {
+    @apply mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700;
+  }
+
+  .link {
+    @apply font-semibold text-blue-600 hover:text-blue-700 hover:underline;
+  }
+}
